@@ -1,0 +1,23 @@
+
+
+
+Ref : https://rancher.com/running-highly-available-wordpress-mysql-kubernetes
+
+
+In Kubernetes, stateful sets offer a way to define the order of pod initialization. We’ll use a stateful set for MySQL, because it ensures our data nodes have enough time to replicate records from previous pods when spinning up. The way we configure this stateful set will allow the MySQL master to spin up before any of the slaves, so cloning can happen directly from master to slave when we scale up. To start, we’ll need to create a persistent volume storage class and a configuration map to apply master and slave configurations as needed. We’re using persistent volumes so that the data in our databases aren’t tied to any specific pods in the cluster. This method protects the database from data loss in the event of a loss of the MySQL master pod. When a master pod is lost, it can reconnect to the xtrabackup slaves on the slave nodes and replicate data from slave to master. MySQL’s replication handles master-to-slave replication but xtrabackup handles slave-to-master backward replication. To dynamically allocate persistent volumes, we create the following storage class utilizing GCE Persistent Disks. However, Kubernetes offers a variety of persistent volume storage providers.
+
+
+The final step in this procedure is to deploy our WordPress pods onto the cluster. To do this, we want to define a service for WordPress and a deployment. For WordPress to be HA, we want every container running the server to be fully replaceable, meaning we can terminate one and spin up another with no change to data or service availability. We also want to tolerate at least one failed container, having a redundant container there to pick up the slack. WordPress stores important site-relevant data in the application directory /var/www/html. For two instances of WordPress to serve the same site, that folder has to contain identical data. When running WordPress in HA, we need to share the /var/www/html folders between instances, so we’ll define an NFS service that will be the mount point for these volumes. 
+
+Define a persistent volume claim to create our shared NFS disk as a GCE persistent disk at size 200GB.
+Define a replication controller for the NFS server which will ensure at least one instance of the NFS server is running at all times.
+Open ports 2049, 20048, and 111 in the container to make the NFS share accessible.
+Use the Google Cloud Registry’s volume-nfs:0.8 image for the NFS server.
+Define a service for the NFS server to handle IP address routing.
+Allow necessary ports through that service firewall.
+
+
+We’ve now created a persistent volume claim that maps to the NFS service we created earlier. It then attaches the volume to the WordPress pod at the /var/www/html root, where WordPress is installed. This preserves all installation and environments across WordPress pods in the cluster. With this configuration, we can spin up and tear down any WordPress node and the data will remain. Because the NFS service is constantly using the physical volume, it will retain the volume and won’t recycle or misallocate it. Deploy the WordPress instances using $ kubectl create -f wordpress.yaml. The default deployment only runs a single instance of WordPress, so feel free to scale up the number of WordPress instances using $ kubectl scale --replicas=<number of replicas> deployment/wordpress. To obtain the address of the WordPress service load balancer, type $ kubectl get services wordpress and grab the EXTERNAL-IP field from the result to navigate to WordPress.
+
+
+
