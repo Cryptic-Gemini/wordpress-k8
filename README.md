@@ -26,7 +26,16 @@ scalable wordpress with mysql and backup
 The master xtrabackup container should show the two connections from the slaves and no errors should be visible in the logs.
 
 
-      $ kubectl create -f five-wordpress.yaml
+      $ kubectl create -f nfs.yaml
+      
+      
+      $ kubectl describe services nfs-server
+      
+      
+   Get the IP of NFS service by $ kubectl describe service nfs-server and update it in six-wordpress.yaml
+    
+    
+    $ kubectl create -f six-wordpress.yaml      (Note: update the <IP of the NFS Service>)
       
       
       $ kubectl scale --replicas=<number of replicas> deployment/wordpress
