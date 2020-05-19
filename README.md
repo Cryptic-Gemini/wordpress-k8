@@ -26,7 +26,7 @@ scalable wordpress with mysql and backup
 The master xtrabackup container should show the two connections from the slaves and no errors should be visible in the logs.
 
 
-      $ kubectl create -f wordpress.yaml
+      $ kubectl create -f five-wordpress.yaml
       
       
       $ kubectl scale --replicas=<number of replicas> deployment/wordpress
